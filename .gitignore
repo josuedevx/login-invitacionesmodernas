@@ -1,0 +1,9 @@
+# Ignorar archivos y directorios de configuración de entorno
+/.env
+
+# Directorio de dependencias de Composer
+/vendor/
+
+# Archivos de configuración locales de IDE
+/.idea/
+/.vscode/

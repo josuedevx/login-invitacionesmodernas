@@ -1,0 +1,300 @@
+# 🧩 Invitaciones Modernas — Módulo de Inicio de Sesión
+
+Sistema de autenticación moderna con integración OAuth (Google), manejo de recuperación de contraseñas, validación de tokens y estructura modular escalable en PHP.
+
+---
+
+## 📁 Estructura del Proyecto
+
+    invitaciones-modernas
+      ├── auth
+      │   ├── config
+      │   │   └── DBConection.php
+      │   ├── controllers
+      │   │   ├── AccountController.php
+      │   │   ├── AuthRecoveryController.php
+      │   │   └── AuthController.php
+      │   ├── middleware
+      │   │   ├── RequestURI.php
+      │   │   └── FBLogin.php
+      │   ├── model
+      │   │   ├── AccountModel.php
+      │   │   ├── AuthRecoveryModel.php
+      │   │   └── AuthModel.php
+      │   ├── FBRedirect.php
+      │   ├── OAuthHandler.php
+      │   ├── Redirect.php
+      │   └── SignOut.php
+      ├── css
+      │   └── styles.css
+      ├── js
+      │   ├── auth.js
+      │   └── functions.js
+      ├── vendor
+      ├── .env
+      ├── composer.json
+      ├── composer.lock
+      ├── home.php
+      └── index.php
+
+---
+
+**📘 Descripción general:**
+
+Este módulo forma parte del sistema **Invitaciones Modernas**, permitiendo un flujo seguro de autenticación con soporte para:
+
+- 🔐 Inicio de sesión tradicional con correo y contraseña.
+- 🌐 Autenticación OAuth (Google y Facebook).
+- 🔁 Recuperación y restablecimiento de contraseñas.
+- 🧱 Arquitectura modular (config / controller / model).
+- ⚡ Variables de entorno y configuración mediante `.env`.
+
+---
+
+## ⚙️ Configuración
+
+### 1️⃣ Instalar dependencias
+
+Asegúrate de tener [Composer](https://getcomposer.org) instalado y luego ejecuta:
+
+```bash
+composer install
+```
+
+### 2️⃣ Configurar archivo .env
+
+Crear un archivo `.env` en la raíz del proyecto con los siguientes valores:
+
+```env
+# === GOOGLE AUTH ===
+GOOGLE_API_KEY=tu_api_key
+GOOGLE_CLIENT_ID=tu_cliente_id
+GOOGLE_CLIENT_SECRET=tu_cliente_secret
+GOOGLE_REDIRECT_URI = http://localhost:8000/auth/Redirect.php o https://tusitioweb/auth/Redirect.php
+
+# === DATABASE ===
+DATABASE_DB_NAME=nombre_db
+DATABASE_DB_HOST=localhost
+DATABASE_DB_USER=root
+DATABASE_DB_PASSWORD=
+
+# === SECRETS ===
+JWT_SECRET_KEY=clave_secreta_segura
+
+# === EMAIL SERVICE ===
+MAIL_HOST = smtp.gmail.com
+MAIL_PORT = 587
+MAIL_USERNAME = youremail@example.com
+MAIL_PASSWORD=tu_password
+MAIL_FROM = youremail@example.com
+SMTP_FROM_NAME = "Invitaciones Modernas"
+
+# === HOST FB APIKEYS ===
+FACEBOOK_APP_ID = app_id
+FACEBOOK_APP_SECRET = app_secret
+FACEBOOK_REDIRECT_URI = https://tusitioweb/auth/FBRedirect.php
+
+# === HOST DE REDIRECCIÓN CUANDO SE NECESITA EL DASHBOARD ===
+HOST_URL=home.php
+```
+
+### 3️⃣ Ejecutar servidor local
+
+Para iniciar el flujo ejecutar en la terminal:
+
+```bash
+php -S localhost:8000
+```
+
+Esto levanta un servidor local en `http://localhost:8000`.
+
+---
+
+## 🔐 Autenticación con Google OAuth 2.0
+
+### 1️⃣ Crear credenciales en Google Cloud Console
+
+1. Accede a [https://console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
+2. Crea un nuevo proyecto o usa uno existente.
+3. Habilita la **Google Identity API (OAuth)**.
+4. Crea un **ID de cliente OAuth 2.0** con tipo **Aplicación web**.
+5. Agrega como **URI de redirección autorizado (Authorized redirect URIs)**:
+
+   ```
+   http://localhost:8000/auth/Redirect.php
+   https://tusitioweb.com/auth/Redirect.php
+   ```
+
+6. Copia tu `CLIENT_ID`, `CLIENT_SECRET` y `GOOGLE_REDIRECT_URI` al archivo `.env`.
+7. Crea un **API Keys** y da click en **Show Key**.
+8. Copia el valor del API Keys en `GOOGLE_API_KEY` al archivo `.env`.
+
+### 2️⃣ Flujo resumido
+
+- El usuario hace clic en "Iniciar sesión con Google".
+- Se genera la URL OAuth y se redirige a Google.
+- Google devuelve un `code` al endpoint (`Redirect.php`).
+- Se intercambia el `code` por un `access_token`.
+- Se obtiene la información del usuario (correo, nombre) y se registra o autentica.
+
+---
+
+## 🌐 Autenticación con Facebook (Meta Developers)
+
+### 1️⃣ Crear app en Meta Developers
+
+1. Ingresa a [https://developers.facebook.com/apps](https://developers.facebook.com/apps)
+2. Inicia sesión o registra una cuenta como developer.
+3. Crea una **nueva app**.
+4. Añade el caso de uso **Autenticar y solicitar datos a usuarios con el inicio de sesión con Facebook** → “Web”.
+5. Configura la aplicación añadiendola a un portafolio o crea uno nuevo.
+5. En la configuración de **Personalizar** casos de uso en **URL de redirección de OAuth válidos**, agrega:
+
+   ```
+   https://tusitioweb.com/auth/FBRedirect.php
+   ```
+6. Copia el **App ID** y **App Secret** al archivo `.env`.
+
+### 2️⃣ Flujo resumido
+
+- `FBLogin.php` construye la URL de autenticación con `scope=email,public_profile`
+- El usuario autoriza y es redirigido a `FBRedirect.php` con un `code`
+- Tu app intercambia el `code` por un `access_token` en la API Graph
+- Luego obtiene la información del usuario con `https://graph.facebook.com/me?fields=id,name,email`
+- Se guarda o autentica al usuario en el sistema
+
+---
+
+## 📚 Archivos Clave
+
+| Archivo                            | Descripción                                         |
+| -----------------------------------| --------------------------------------------------- |
+| `auth/middleware/FBLogin.php`      | Redirección inicial al login de Facebook            |
+| `auth/FBRedirect.php`              | Procesa el código y obtiene datos del usuario       |
+| `auth/Redirect.php`                | Redirección de Google OAuth                         |
+| `auth/OAuthHandler.php`            | Lógica de registro/autenticación                    |
+| `.env`                             | Variables de entorno (credenciales y configuración) |
+
+---
+
+## 🚀 Uso del Sistema
+
+- Accede al panel de inicio de sesión.
+- Prueba tanto el login manual como el OAuth 2.0 y Facebook 
+- En caso de olvidar la contraseña, utiliza el flujo de Password Reset.
+
+---
+
+# 🧮 Base de Datos
+
+Esta documentación describe las tablas, campos, tipos de datos y relaciones de la base de datos del sistema.
+
+---
+
+## ÍNDICE
+
+1. [Tabla `users`](#tabla-users)
+2. [Tabla `password_resets`](#tabla-password_resets)
+
+---
+
+## Tabla `users`
+
+Entidad principal que representa a cada usuario del sistema.
+
+| Campo      | Tipo         | Atributos                   | Descripción                     |
+| ---------- | ------------ | --------------------------- | ------------------------------- |
+| `id`       | INT(11)      | PRIMARY KEY, AUTO_INCREMENT | Identificador único del usuario |
+| `email`    | VARCHAR(25)  | NOT NULL, UNIQUE            | Correo electrónico para login   |
+| `password` | VARCHAR(255) | NOT NULL                    | Hash de la contraseña           |
+| `token`    | VARCHAR(255) | NULL                        | Token de acceso                 |
+| `status`   | INT(11)      | NOT NULL, DEFAULT 1         | Estado (1=activo, 0=inactivo)   |
+
+---
+
+## Tabla `password_resets`
+
+Información personal asociada a cada usuario.
+
+| Campo         | Tipo         | Atributos                     | Descripción                   |
+| ------------- | ------------ | ----------------------------- | ----------------------------- |
+| `id`          | INT(11)      | PRIMARY KEY, AUTO_INCREMENT   | Identificador único           |
+| `user_id`     | INT(11)      | NOT NULL, FOREIGN KEY → users | Usuario al que pertenece      |
+| `email`       | VARCHAR(255) | NOT NULL                      | Correo al que pertenece       |
+| `reset_code`  | VARCHAR(6)   | NOT NULL                      | Codigo de 6 digitos a validar |
+| `reset_token` | VARCHAR(255) | NOT NULL                      | Token de validaciión          |
+| `expires_at`  | datetime     | NOT NULL                      | Tiempo de expiración del code |
+| `used`        | tinyint(1)   | NULL, DEFAULT 0               | 0 no usado / 1 ya usado       |
+| `created_at`  | timestamp    | NOT NULL                      | Fecha de creación             |
+
+---
+
+## 🔗 Relaciones entre tablas
+
+- **users**  
+  1 → (`users.id`) → password_resets (`password_resets.user_id`)
+
+---
+
+## 💾 Ejemplos de Inserción
+
+A continuación se muestran ejemplos de cómo insertar datos en las tablas para un flujo típico de registro y uso del sistema.
+
+### 1. Insertar un usuario
+
+```sql
+INSERT INTO `users` (email, password, token, status)
+VALUES ('jonhdoe@example.com', '$2y$10$hashedPassword123...', 'eyJ0eXAiOiJKV1QiLCJ...', 'token123abc', 1);
+```
+
+### 2. Insertar un codigo de accesso
+
+```sql
+INSERT INTO `password_resets` (user_id, email, reset_code, reset_token, expires_at)
+VALUES (1, 'jonhdoe@example.com', '123456', 'hjksdhisdui...', '2025-11-04 18:42:04');
+```
+
+---
+
+## 🧠 Clase de Conexión a Base de Datos
+
+El siguiente fragmento muestra la clase `DBConection` que gestiona la conexión a la base de datos:
+
+```php
+<?php
+class DBConection
+{
+    public static function connect()
+    {
+        $DATABASE_HOST = '';
+        $DATABASE_USER = '';
+        $DATABASE_PASS = '';
+        $DATABASE_NAME = '';
+
+        $conexion = mysqli_connect($DATABASE_HOST, $DATABASE_USER, $DATABASE_PASS, $DATABASE_NAME);
+
+        if (!$conexion) {
+            throw new Exception('Fallo en la conexión de MySQL: ' . mysqli_connect_error());
+        }
+
+        return $conexion;
+    }
+}
+?>
+```
+
+---
+
+## 👨‍💻 Créditos
+
+Desarrollado por [Josué](https://github.com/josuedevx).
+
+---
+
+## 📄 Licencia
+
+Este proyecto es propiedad privada de Link Socially.
+No está autorizado su uso, distribución o modificación sin consentimiento explícito.
+Consulta el archivo `LICENSE` para más detalles
+
+---

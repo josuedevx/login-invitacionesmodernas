@@ -70,7 +70,6 @@ Crear un archivo `.env` en la raíz del proyecto con los siguientes valores:
 GOOGLE_API_KEY=tu_api_key
 GOOGLE_CLIENT_ID=tu_cliente_id
 GOOGLE_CLIENT_SECRET=tu_cliente_secret
-GOOGLE_REDIRECT_URI = http://localhost:8000/auth/Redirect.php o https://tusitioweb/auth/Redirect.php
 
 # === DATABASE ===
 DATABASE_DB_NAME=nombre_db
@@ -92,10 +91,10 @@ SMTP_FROM_NAME = "Invitaciones Modernas"
 # === HOST FB APIKEYS ===
 FACEBOOK_APP_ID = app_id
 FACEBOOK_APP_SECRET = app_secret
-FACEBOOK_REDIRECT_URI = https://tusitioweb/auth/FBRedirect.php
 
-# === HOST DE REDIRECCIÓN CUANDO SE NECESITA EL DASHBOARD ===
+# === HOST DE REDIRECCIÓN ===
 HOST_URL=home.php
+BASE_URL=http://localhost:8000 o https://tusitioweb
 ```
 
 ### 3️⃣ Ejecutar servidor local
@@ -148,12 +147,13 @@ Esto levanta un servidor local en `http://localhost:8000`.
 3. Crea una **nueva app**.
 4. Añade el caso de uso **Autenticar y solicitar datos a usuarios con el inicio de sesión con Facebook** → “Web”.
 5. Configura la aplicación añadiendola a un portafolio o crea uno nuevo.
-5. En la configuración de **Personalizar** casos de uso en **URL de redirección de OAuth válidos**, agrega:
+6. En la configuración de **Personalizar** casos de uso en **URL de redirección de OAuth válidos**, agrega:
 
    ```
    https://tusitioweb.com/auth/FBRedirect.php
    ```
-6. Copia el **App ID** y **App Secret** al archivo `.env`.
+
+7. Copia el **App ID** y **App Secret** al archivo `.env`.
 
 ### 2️⃣ Flujo resumido
 
@@ -167,20 +167,20 @@ Esto levanta un servidor local en `http://localhost:8000`.
 
 ## 📚 Archivos Clave
 
-| Archivo                            | Descripción                                         |
-| -----------------------------------| --------------------------------------------------- |
-| `auth/middleware/FBLogin.php`      | Redirección inicial al login de Facebook            |
-| `auth/FBRedirect.php`              | Procesa el código y obtiene datos del usuario       |
-| `auth/Redirect.php`                | Redirección de Google OAuth                         |
-| `auth/OAuthHandler.php`            | Lógica de registro/autenticación                    |
-| `.env`                             | Variables de entorno (credenciales y configuración) |
+| Archivo                       | Descripción                                         |
+| ----------------------------- | --------------------------------------------------- |
+| `auth/middleware/FBLogin.php` | Redirección inicial al login de Facebook            |
+| `auth/FBRedirect.php`         | Procesa el código y obtiene datos del usuario       |
+| `auth/Redirect.php`           | Redirección de Google OAuth                         |
+| `auth/OAuthHandler.php`       | Lógica de registro/autenticación                    |
+| `.env`                        | Variables de entorno (credenciales y configuración) |
 
 ---
 
 ## 🚀 Uso del Sistema
 
 - Accede al panel de inicio de sesión.
-- Prueba tanto el login manual como el OAuth 2.0 y Facebook 
+- Prueba tanto el login manual como el OAuth 2.0 y Facebook
 - En caso de olvidar la contraseña, utiliza el flujo de Password Reset.
 
 ---
@@ -282,6 +282,164 @@ class DBConection
 }
 ?>
 ```
+
+---
+
+# 🔐 Consumo del Servicio `fetch_user`
+
+Esta guía explica cómo **consumir el endpoint externo `fetch_user`** del sistema de autenticación de **Invitaciones Modernas**.  
+Su función es **crear un usuario automáticamente** a partir de un correo electrónico y devolver una **contraseña temporal autogenerada** junto con un token de sesión (JWT).
+
+---
+
+## 🌐 Endpoint
+
+| Entorno    | URL                                                                  |
+| ---------- | -------------------------------------------------------------------- |
+| Local      | `http://localhost:8000/auth/controllers/AccountController.php`       |
+| Producción | `https://test.dervianseo.com/auth/v1/register` |
+
+---
+
+## 📩 Método y Acción
+
+El servicio solo acepta **solicitudes POST**, y es **obligatorio enviar la acción `fetch_user`** para que el backend identifique correctamente la operación.
+
+### 🔸 Parámetros requeridos
+
+| Key      | Valor                 | Descripción                                                |
+| -------- | --------------------- | ---------------------------------------------------------- |
+| `action` | `fetch_user`          | Indica al API que debe ejecutar la función correspondiente |
+| `email`  | `cliente@ejemplo.com` | Correo del usuario a registrar                             |
+
+---
+
+## ⚙️ Ejemplo 1: Uso con JavaScript (fetch API)
+
+```js
+const formData = new FormData();
+formData.append("action", "fetch_user");
+formData.append("email", "cliente@ejemplo.com");
+
+fetch("https://test.dervianseo.com/auth/v1/register", {
+  method: "POST",
+  body: formData,
+})
+  .then((res) => res.json())
+  .then((data) => {
+    if (data.success) {
+      console.log("✅ Usuario creado:", data.email);
+      console.log("🔑 Contraseña temporal:", data.temporal_password);
+      console.log("🪪 Token JWT:", data.token);
+    } else {
+      console.error("❌ Error:", data.message);
+    }
+  })
+  .catch((err) => console.error("🚫 Error en la solicitud:", err));
+```
+
+---
+
+## ⚙️ Ejemplo 2: Uso con PHP (cURL)
+
+```php
+$postData = [
+    "action" => "fetch_user",
+    "email" => "cliente@ejemplo.com"
+];
+
+$ch = curl_init("https://test.dervianseo.com/auth/v1/register");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+echo $response;
+```
+
+---
+
+## ⚙️ Ejemplo 3: Uso con Python (requests)
+
+```python
+import requests
+
+url = "https://test.dervianseo.com/auth/v1/register"
+data = {
+    "action": "fetch_user",
+    "email": "cliente@ejemplo.com"
+}
+
+response = requests.post(url, data=data)
+print(response.json())
+```
+
+---
+
+## ⚙️ Ejemplo 4: Uso con Postman
+
+1. Selecciona método **POST**
+2. En la pestaña **Body → form-data**, agrega:
+
+| Key    | Value               |
+| ------ | ------------------- |
+| action | fetch_user          |
+| email  | cliente@ejemplo.com |
+
+3. Envía la solicitud.
+4. El sistema devolverá un JSON con los datos del usuario generado.
+
+---
+
+## 📤 Respuesta Exitosa (JSON)
+
+```json
+{
+  "success": true,
+  "email": "cliente@ejemplo.com",
+  "temporal_password": "674a812baf1c5",
+  "token": "JWT_TOKEN_GENERADO",
+  "message": "¡Registro completado exitosamente!",
+  "code": 200
+}
+```
+
+---
+
+## ⚠️ Códigos de Error y Mensajes
+
+| Código | Mensaje                                                         | Causa                                            |
+| ------ | --------------------------------------------------------------- | ------------------------------------------------ |
+| 200    | `¡Registro completado exitosamente!`                            | Operación completada con éxito                   |
+| 400    | `Email inválido`                                                | El formato del correo no es válido               |
+| 400    | `Este email ya está asociado a una cuenta existente.`           | El usuario ya existe en la base de datos         |
+| 400    | `Nuestra plataforma ha alcanzado su capacidad máxima.`          | Se llegó al límite de usuarios permitidos        |
+| 400    | `Error al crear usuario`                                        | No se pudo registrar el usuario en la base       |
+| 500    | `Error desconocido al registrar usuario`                        | Error interno del servidor                       |
+| 500    | `Error al procesar el registro. Por favor, intenta nuevamente.` | Falla en la inserción en base de datos           |
+| 405    | `Método no permitido`                                           | El endpoint no recibió una solicitud POST válida |
+
+---
+
+## 🧠 Detalles Técnicos
+
+- **Password temporal**: Se crea automáticamente con `uniqid()` en PHP.
+- **Sesión**: Se inicia automáticamente al crear el usuario.
+
+---
+
+## 🔄 Flujo General del Servicio `fetch_user`
+
+1. Se envía una solicitud **POST** con `action=fetch_user` y un correo electrónico.
+2. El backend valida el correo y genera una contraseña temporal.
+3. El usuario se crea en la base de datos junto con su rol.
+4. Se genera un token JWT y se devuelve junto con los datos del usuario.
+5. El sistema cliente puede usar esta información para enviar un correo con las credenciales.
+
+---
+
+© 2025 - Documentación técnica del módulo **AccountController - fetch_user()**
 
 ---
 

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../model/AccountModel.php';
 use Firebase\JWT\JWT;
 
+
 session_start();
 header('Content-Type: application/json');
 
@@ -43,22 +44,24 @@ class AccountController
 
             $result = $this->model->saveUser($email, password_hash($password, PASSWORD_DEFAULT));
 
-            $secret_key = $_ENV['JWT_SECRET_KEY'];
-            $payload = [
-                "id" => $result['id'],
-                "email" => $email,
-                "iat" => time(),
-            ];
-
-            $jwt = JWT::encode($payload, $secret_key, 'HS256');
-
-
-            $_SESSION['loggedin'] = true;
-            $_SESSION['email'] = $email;
-            $_SESSION['id'] = $result['id'];
+            if (isset($result['error'])) {
+                throw new Exception($this->model->getErrorMessage($result['error']), 400);
+            }
 
             if (isset($result['id'])) {
-                error_log("📌 Step 4: User registered successfully - ID: " . $result['id']);
+                $secret_key = $_ENV['JWT_SECRET_KEY'];
+                $payload = [
+                    "id" => $result['id'],
+                    "email" => $email,
+                    "iat" => time(),
+                ];
+
+                $jwt = JWT::encode($payload, $secret_key, 'HS256');
+
+                $_SESSION['loggedin'] = true;
+                $_SESSION['email'] = $email;
+                $_SESSION['id'] = $result['id'];
+
                 return [
                     'success' => true,
                     'token' => $jwt,
@@ -66,13 +69,70 @@ class AccountController
                     'code' => 200
                 ];
             } else {
-                $errorMessage = $this->model->getErrorMessage($result['error'] ?? 'unknown_error');
-                error_log("📌 Step 4: Registration failed - " . $errorMessage);
-                throw new Exception($errorMessage, 400);
+                throw new Exception('Error desconocido al registrar usuario', 500);
             }
+
 
         } catch (Exception $e) {
             error_log("❌ Error in registerUser: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'code' => $e->getCode() ?: 500
+            ];
+        }
+    }
+
+    public function fetchUser($email)
+    {
+        try {
+            // Validar email
+            $email = filter_var($email ?? '', FILTER_VALIDATE_EMAIL);
+            if (!$email) {
+                throw new Exception('Email inválido', 400);
+            }
+
+            // Verificar si el usuario ya existe
+
+            $temporalPassword = uniqid();
+            $result = $this->model->saveUser($email, password_hash($temporalPassword, PASSWORD_DEFAULT));
+
+            if (isset($result['error'])) {
+                throw new Exception($this->model->getErrorMessage($result['error']), 400);
+            }
+
+            if (!isset($result['id'])) {
+                throw new Exception('Error al crear usuario', 500);
+            }
+
+            if (isset($result['id'])) {
+                $secret_key = $_ENV['JWT_SECRET_KEY'];
+                $payload = [
+                    "id" => $result['id'],
+                    "email" => $email,
+                    "iat" => time(),
+                ];
+
+                $jwt = JWT::encode($payload, $secret_key, 'HS256');
+
+                $_SESSION['loggedin'] = true;
+                $_SESSION['email'] = $email;
+                $_SESSION['id'] = $result['id'];
+
+                return [
+                    'success' => true,
+                    'email' => $email,
+                    'temporal_password' => $temporalPassword,
+                    'token' => $jwt,
+                    'message' => '¡Registro completado exitosamente!',
+                    'code' => 200
+                ];
+            } else {
+                throw new Exception('Error desconocido al registrar usuario', 500);
+            }
+
+        } catch (Exception $e) {
+            error_log("❌ Error in fetchUser: " . $e->getMessage());
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -92,6 +152,11 @@ if ($_POST['action'] ?? false) {
         case 'register_user';
             $response = $controller->registerUser($_POST['email'] ?? '', $_POST['password'] ?? '');
             break;
+
+        case 'fetch_user';
+            $response = $controller->fetchUser($_POST['email'] ?? '');
+            break;
+
 
 
         default:

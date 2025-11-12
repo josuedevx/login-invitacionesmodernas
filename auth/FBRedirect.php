@@ -4,7 +4,8 @@ require_once 'OAuthHandler.php';
 
 $appId = $_ENV['FACEBOOK_APP_ID'];
 $appSecret = $_ENV['FACEBOOK_APP_SECRET'];
-$redirectUri = $_ENV['FACEBOOK_REDIRECT_URI'];
+$redirectUri = $_ENV['BASE_URL'] . '/auth/FBRedirect.php';
+// $redirectUri = $_ENV['FACEBOOK_REDIRECT_URI'];
 
 if (!isset($_GET['code']) || $_GET['error'] === 'access_denied') {
     // echo "Error: no se recibió el código.";

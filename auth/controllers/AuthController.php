@@ -12,6 +12,17 @@ require_once __DIR__ . '/../middleware/RequestURI.php';
 session_start();
 header('Content-Type: application/json');
 
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+
+    $response = ['success' => false, 'message' => 'method not allowed', 'code' => 500];
+
+    echo json_encode($response);
+    exit;
+
+}
+
+
 class AuthController
 {
     private $model;

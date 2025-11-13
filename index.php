@@ -3,13 +3,13 @@ require_once __DIR__ . "/vendor/autoload.php";
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/');
 $dotenv->load();
 
-
 session_start();
 
 if (isset($_SESSION['loggedin'])) {
     header('Location: /' . $_ENV['HOST_URL']);
     exit;
 }
+
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/');
 $dotenv->load();
 $client = new Google_Client();

@@ -294,10 +294,10 @@ Su función es **crear un usuario automáticamente** a partir de un correo elect
 
 ## 🌐 Endpoint
 
-| Entorno    | URL                                                                  |
-| ---------- | -------------------------------------------------------------------- |
-| Local      | `http://localhost:8000/auth/controllers/AccountController.php`       |
-| Producción | `https://test.dervianseo.com/auth/v1/register` |
+| Entorno    | URL                                                            |
+| ---------- | -------------------------------------------------------------- |
+| Local      | `http://localhost:8000/auth/controllers/AccountController.php` |
+| Producción | `https://test.dervianseo.com/auth/v1/register`                 |
 
 ---
 

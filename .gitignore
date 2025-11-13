@@ -1,5 +1,6 @@
 # Ignorar archivos y directorios de configuración de entorno
 /.env
+/.htaccess
 
 # Directorio de dependencias de Composer
 /vendor/

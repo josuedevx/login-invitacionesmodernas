@@ -1,11 +1,21 @@
 <?php
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../model/AccountModel.php';
+require_once __DIR__ . '/../middleware/RequestURI.php';
 use Firebase\JWT\JWT;
-
 
 session_start();
 header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+
+    $response = ['success' => false, 'message' => 'method not allowed', 'code' => 500];
+
+    echo json_encode($response);
+    exit;
+
+}
+
 
 class AccountController
 {
@@ -114,16 +124,16 @@ class AccountController
                 ];
 
                 $jwt = JWT::encode($payload, $secret_key, 'HS256');
+                $recoveryUrl = requestURI();
 
-                $_SESSION['loggedin'] = true;
-                $_SESSION['email'] = $email;
-                $_SESSION['id'] = $result['id'];
+                $redirectUrl = $recoveryUrl . "auto-login.php?token=" . urlencode($jwt);
 
                 return [
                     'success' => true,
                     'email' => $email,
                     'temporal_password' => $temporalPassword,
                     'token' => $jwt,
+                    'redirect_url' => $redirectUrl,
                     'message' => '¡Registro completado exitosamente!',
                     'code' => 200
                 ];
